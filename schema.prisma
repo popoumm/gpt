@@ -29,6 +29,7 @@ enum OrderType {
 
 enum OrderStatus {
   PENDING
+  PARTIALLY_FILLED
   FILLED
   CANCELLED
 }
@@ -85,9 +86,33 @@ model User {
   wallets           Wallet[]
   orders            Order[]
   transactions      Transaction[]
+  deposits          DepositRequest[]
+  withdraws         WithdrawRequest[]
 
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+}
+
+model DepositRequest {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asset     String
+  amount    Float
+  status    String   @default("PENDING") // PENDING | COMPLETED | FAILED
+  refId     String?
+  createdAt DateTime @default(now())
+}
+
+model WithdrawRequest {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asset     String
+  amount    Float
+  address   String?
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
 }
 
 // ================= WALLET =================
@@ -98,6 +123,7 @@ model Wallet {
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   asset     AssetType
   balance   Float     @default(0)
+  lockedBalance Float @default(0)
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -124,8 +150,23 @@ model Order {
   type      OrderType
   amount    Float
   price     Float
+  filledAmount Float @default(0)
+  remainingAmount Float?
+  orderMode String @default("MARKET") // MARKET | LIMIT
+  fee Float @default(0)
   status    OrderStatus @default(PENDING)
   createdAt DateTime    @default(now())
+}
+
+model TradeExecution {
+  id          Int      @id @default(autoincrement())
+  asset       AssetType
+  price       Float
+  amount      Float
+  makerOrderId Int?
+  takerOrderId Int?
+  isSimulated Boolean  @default(false)
+  executedAt  DateTime @default(now())
 }
 
 // ================= TRANSACTION =================
@@ -138,7 +179,21 @@ model Transaction {
   asset     AssetType
   amount    Float
   status    TransactionStatus @default(PENDING)
+  refId     String?
   createdAt DateTime          @default(now())
+}
+
+model AuditLog {
+  id           Int      @id @default(autoincrement())
+  actorUserId  Int?
+  actorRole    Role?
+  actionType   String
+  targetType   String
+  targetId     String?
+  oldValue     String?
+  newValue     String?
+  reason       String?
+  createdAt    DateTime @default(now())
 }
 
 // ================= API SOURCE =================

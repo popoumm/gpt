@@ -1,5 +1,5 @@
-import prisma from '../lib/prisma';
-import { ProductCategory, ProductUnit } from '@prisma/client';
+import prisma from './prisma';
+import { ProductCategory, ProductUnit, Role } from '@prisma/client';
 
 // ================= GET =================
 
@@ -29,47 +29,65 @@ export async function createProduct(input: {
   canBuy?: boolean;
   canSell?: boolean;
   autoTrade?: boolean;
+  actorUserId?: number;
+  actorRole?: Role;
+  reason?: string;
 }) {
-  const product = await prisma.product.create({
-    data: {
-      name: input.name.trim(),
-
-      category: input.category,
-      unit: input.unit ?? ProductUnit.GRAM,
-
-      apiId: input.apiId ?? null,
-      useApi: input.useApi ?? true,
-
-      manualPrice: input.manualPrice ?? null,
-
-      buySpread: input.buySpread ?? 0,
-      sellSpread: input.sellSpread ?? 0,
-
-      isActive: input.isActive ?? true,
-      canBuy: input.canBuy ?? true,
-      canSell: input.canSell ?? true,
-
-      autoTrade: input.autoTrade ?? true,
-    },
-    include: {
-      api: true,
-    },
-  });
-
-  // اگر تنظیمات بازار برای این محصول نبود، بساز
-  const exists = await prisma.productSetting.findUnique({
-    where: { asset: product.name },
-  });
-
-  if (!exists) {
-    await prisma.productSetting.create({
+  const product = await prisma.$transaction(async (tx) => {
+    const created = await tx.product.create({
       data: {
-        asset: product.name,
-        spreadPercent: 0,
-        autoHedgeEnabled: false,
+        name: input.name.trim(),
+
+        category: input.category,
+        unit: input.unit ?? ProductUnit.GRAM,
+
+        apiId: input.apiId ?? null,
+        useApi: input.useApi ?? true,
+
+        manualPrice: input.manualPrice ?? null,
+
+        buySpread: input.buySpread ?? 0,
+        sellSpread: input.sellSpread ?? 0,
+
+        isActive: input.isActive ?? true,
+        canBuy: input.canBuy ?? true,
+        canSell: input.canSell ?? true,
+
+        autoTrade: input.autoTrade ?? true,
+      },
+      include: {
+        api: true,
       },
     });
-  }
+
+    const exists = await tx.productSetting.findUnique({
+      where: { asset: created.name },
+    });
+
+    if (!exists) {
+      await tx.productSetting.create({
+        data: {
+          asset: created.name,
+          spreadPercent: 0,
+          autoHedgeEnabled: false,
+        },
+      });
+    }
+
+    await tx.auditLog.create({
+      data: {
+        actorUserId: input.actorUserId,
+        actorRole: input.actorRole,
+        actionType: 'CREATE_PRODUCT',
+        targetType: 'PRODUCT',
+        targetId: String(created.id),
+        newValue: JSON.stringify(created),
+        reason: input.reason,
+      },
+    });
+
+    return created;
+  });
 
   return product;
 }
@@ -90,70 +108,81 @@ export async function updateProduct(input: {
   canBuy?: boolean;
   canSell?: boolean;
   autoTrade?: boolean;
+  actorUserId?: number;
+  actorRole?: Role;
+  reason?: string;
 }) {
-  const oldProduct = await prisma.product.findUnique({
-    where: { id: input.id },
-  });
-
-  if (!oldProduct) {
-    throw new Error('Product not found');
-  }
-
-  const updatedProduct = await prisma.product.update({
-    where: { id: input.id },
-    data: {
-      name: input.name?.trim(),
-      category: input.category,
-      unit: input.unit,
-
-      apiId: input.apiId,
-      useApi: input.useApi,
-
-      manualPrice: input.manualPrice,
-
-      buySpread: input.buySpread,
-      sellSpread: input.sellSpread,
-
-      isActive: input.isActive,
-      canBuy: input.canBuy,
-      canSell: input.canSell,
-
-      autoTrade: input.autoTrade,
-    },
-    include: {
-      api: true,
-    },
-  });
-
-  // اگر اسم محصول عوض شد، ProductSetting هم sync بشه
-  if (input.name && input.name.trim() !== oldProduct.name) {
-    await prisma.productSetting.updateMany({
-      where: { asset: oldProduct.name },
-      data: { asset: input.name.trim() },
+  return prisma.$transaction(async (tx) => {
+    const oldProduct = await tx.product.findUnique({
+      where: { id: input.id },
     });
-  }
 
-  // اگر ProductSetting برای اسم جدید نبود، بساز
-  const exists = await prisma.productSetting.findUnique({
-    where: { asset: updatedProduct.name },
-  });
+    if (!oldProduct) {
+      throw new Error('Product not found');
+    }
 
-  if (!exists) {
-    await prisma.productSetting.create({
+    const updatedProduct = await tx.product.update({
+      where: { id: input.id },
       data: {
-        asset: updatedProduct.name,
-        spreadPercent: 0,
-        autoHedgeEnabled: false,
+        name: input.name?.trim(),
+        category: input.category,
+        unit: input.unit,
+        apiId: input.apiId,
+        useApi: input.useApi,
+        manualPrice: input.manualPrice,
+        buySpread: input.buySpread,
+        sellSpread: input.sellSpread,
+        isActive: input.isActive,
+        canBuy: input.canBuy,
+        canSell: input.canSell,
+        autoTrade: input.autoTrade,
+      },
+      include: {
+        api: true,
       },
     });
-  }
 
-  return updatedProduct;
+    if (input.name && input.name.trim() !== oldProduct.name) {
+      await tx.productSetting.updateMany({
+        where: { asset: oldProduct.name },
+        data: { asset: input.name.trim() },
+      });
+    }
+
+    const exists = await tx.productSetting.findUnique({
+      where: { asset: updatedProduct.name },
+    });
+
+    if (!exists) {
+      await tx.productSetting.create({
+        data: {
+          asset: updatedProduct.name,
+          spreadPercent: 0,
+          autoHedgeEnabled: false,
+        },
+      });
+    }
+
+    await tx.auditLog.create({
+      data: {
+        actorUserId: input.actorUserId,
+        actorRole: input.actorRole,
+        actionType: 'UPDATE_PRODUCT',
+        targetType: 'PRODUCT',
+        targetId: String(updatedProduct.id),
+        oldValue: JSON.stringify(oldProduct),
+        newValue: JSON.stringify(updatedProduct),
+        reason: input.reason,
+      },
+    });
+
+    return updatedProduct;
+  });
 }
 
 // ================= DELETE =================
 
-export async function deleteProduct(id: number) {
+export async function deleteProduct(id: number, actor?: { userId?: number; role?: Role; reason?: string }) {
   const product = await prisma.product.findUnique({
     where: { id },
   });
@@ -162,14 +191,56 @@ export async function deleteProduct(id: number) {
     throw new Error('Product not found');
   }
 
-  await prisma.productSetting.deleteMany({
-    where: {
-      asset: product.name,
-    },
+  const hasOrders = await prisma.order.count({
+    where: { asset: product.name as any },
   });
 
-  return await prisma.product.delete({
-    where: { id },
+  if (hasOrders > 0) {
+    const disabled = await prisma.product.update({
+      where: { id },
+      data: { isActive: false, canBuy: false, canSell: false },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        actorUserId: actor?.userId,
+        actorRole: actor?.role,
+        actionType: 'SOFT_DISABLE_PRODUCT',
+        targetType: 'PRODUCT',
+        targetId: String(id),
+        oldValue: JSON.stringify(product),
+        newValue: JSON.stringify(disabled),
+        reason: actor?.reason ?? 'Referenced by orders',
+      },
+    });
+
+    return disabled;
+  }
+
+  return prisma.$transaction(async (tx) => {
+    await tx.productSetting.deleteMany({
+      where: {
+        asset: product.name,
+      },
+    });
+
+    const deleted = await tx.product.delete({
+      where: { id },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorUserId: actor?.userId,
+        actorRole: actor?.role,
+        actionType: 'DELETE_PRODUCT',
+        targetType: 'PRODUCT',
+        targetId: String(id),
+        oldValue: JSON.stringify(product),
+        reason: actor?.reason,
+      },
+    });
+
+    return deleted;
   });
 }
 

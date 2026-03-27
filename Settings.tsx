@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
-import { GlassCard, GlassButton, GlassInput } from '../components/GlassUI';
-import Sidebar from '../components/Sidebar';
+import { GlassCard, GlassButton, GlassInput } from './components/GlassUI';
+import Sidebar from './components/Sidebar';
 import { 
   Settings as SettingsIcon, 
   User, 
@@ -30,8 +30,8 @@ const containerVariants = {
   }
 };
 
-import { useTheme } from '../_core/ThemeContext';
-import { UserRole } from '../types';
+import { useTheme } from './_core/ThemeContext';
+import { UserRole } from './types';
 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },

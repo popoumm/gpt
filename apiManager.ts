@@ -1,4 +1,4 @@
-import prisma from '../lib/prisma';
+import prisma from './prisma';
 
 // گرفتن APIهای فعال (برای fallback)
 export async function getActiveApis(type: string) {
