@@ -1,6 +1,6 @@
 import React from 'react';
-import { GlassCard, GlassButton } from '../components/GlassUI';
-import Sidebar from '../components/Sidebar';
+import { GlassCard, GlassButton } from './components/GlassUI';
+import Sidebar from './components/Sidebar';
 import { 
   Newspaper, 
   TrendingUp, 

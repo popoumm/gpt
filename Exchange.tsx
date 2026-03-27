@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { GlassCard, GlassButton, GlassInput } from '../components/GlassUI';
-import Sidebar from '../components/Sidebar';
+import { GlassCard, GlassButton, GlassInput } from './components/GlassUI';
+import Sidebar from './components/Sidebar';
 import { 
   ArrowDown, 
   RefreshCcw, 

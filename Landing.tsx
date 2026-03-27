@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { GlassButton } from '../components/GlassUI';
+import { GlassButton } from './components/GlassUI';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLocation } from 'wouter';
 import { Shield, Zap, Globe, ArrowLeft, User } from 'lucide-react';
-import { useTheme } from '../_core/ThemeContext';
-import TradingModule from '../components/TradingModule';
+import { useTheme } from './_core/ThemeContext';
+import TradingModule from './components/TradingModule';
 
 const tickerItems = [
   { name: 'طلا', price: '۳,۴۵۰,۰۰۰', change: '+1.24%' },
