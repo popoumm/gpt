@@ -1,5 +1,5 @@
 import { AssetType, OrderType, OrderStatus } from '@prisma/client';
-import prisma from '../lib/prisma';
+import prisma from './prisma';
 // In-memory list of fake orders. These objects mirror the Order model
 // but are not stored in the database.
 interface FakeOrder {

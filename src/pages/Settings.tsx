@@ -31,7 +31,7 @@ const containerVariants = {
 };
 
 import { useTheme } from '../_core/ThemeContext';
-import { UserRole } from '../types';
+import { UserRole } from '../../types';
 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },

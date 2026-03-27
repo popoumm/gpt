@@ -1,5 +1,5 @@
 import fetch from 'node-fetch';
-import prisma from '../lib/prisma';
+import prisma from './prisma';
 
 // ---------------- MEMORY ----------------
 let latestPrices: Record<string, any> = {};

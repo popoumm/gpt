@@ -1,5 +1,5 @@
 import { Role } from '@prisma/client';
-import prisma from '../lib/prisma';
+import prisma from './prisma';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { createDefaultWallet } from './wallet';
@@ -119,6 +119,15 @@ export function verifyToken(token: string): null | { id: number; role: Role } {
   } catch {
     return null;
   }
+}
+
+export function parseUserFromAuthHeader(authHeader?: string) {
+  const token = authHeader?.startsWith('Bearer ')
+    ? authHeader.slice('Bearer '.length)
+    : undefined;
+
+  if (!token) return null;
+  return verifyToken(token);
 }
 
 /**

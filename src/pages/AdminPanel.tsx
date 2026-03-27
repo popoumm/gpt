@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useTheme } from '../_core/ThemeContext';
-import { UserRole } from '../types';
+import { UserRole } from '../../types';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -45,13 +45,42 @@ export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState<'users' | 'rates' | 'transactions' | 'market'>('users');
   const { userRole, setUserRole } = useTheme();
   const rates = trpc.getRates.useQuery();
-  
-  // Mock data for admin view
+  const users = trpc.getUsers.useQuery();
+  const transactions = trpc.getTransactions.useQuery({});
+
   const platformStats = [
-    { label: 'کل کاربران', value: '۱,۲۴۰', icon: <Users size={20} />, color: 'text-blue-400' },
-    { label: 'حجم معاملات ۲۴ساعت', value: '۴۵۰,۰۰۰,۰۰۰ تومان', icon: <Activity size={20} />, color: 'text-[#00FFA3]' },
-    { label: 'تراکنش‌های در انتظار', value: '۱۲', icon: <Clock size={20} />, color: 'text-yellow-400' },
-    { label: 'ضریب امنیت سیستم', value: '۹۹.۹٪', icon: <ShieldCheck size={20} />, color: 'text-[#FFD700]' },
+    {
+      label: 'کل کاربران',
+      value: String(users.data?.length ?? 0),
+      icon: <Users size={20} />,
+      color: 'text-blue-400',
+    },
+    {
+      label: 'حجم معاملات تکمیل‌شده',
+      value: String(
+        (transactions.data?.rows ?? [])
+          .filter((t: any) => t.status === 'COMPLETED')
+          .length
+      ),
+      icon: <Activity size={20} />,
+      color: 'text-[#00FFA3]',
+    },
+    {
+      label: 'تراکنش‌های در انتظار',
+      value: String(
+        (transactions.data?.rows ?? [])
+          .filter((t: any) => t.status === 'PENDING')
+          .length
+      ),
+      icon: <Clock size={20} />,
+      color: 'text-yellow-400',
+    },
+    {
+      label: 'نرخ‌های فعال',
+      value: String((rates.data ?? []).filter((r: any) => r.isActive).length),
+      icon: <ShieldCheck size={20} />,
+      color: 'text-[#FFD700]',
+    },
   ];
 
   // Only SUPER_ADMIN sees Profit/Loss

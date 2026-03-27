@@ -1,6 +1,6 @@
 import { Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import prisma from '../lib/prisma';
+import prisma from './prisma';
 // The reward (e.g. in USDT) given for each successful referral. Adjust
 // this constant to suit your business model.
 const REFERRAL_REWARD = 1.0;
