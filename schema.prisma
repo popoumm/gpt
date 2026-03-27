@@ -1,0 +1,233 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ================= ENUMS =================
+
+enum Role {
+  USER
+  OPERATOR
+  ADMIN
+}
+
+enum AssetType {
+  GOLD
+  USD
+  AED
+  USDT
+  TRX
+}
+
+enum OrderType {
+  BUY
+  SELL
+}
+
+enum OrderStatus {
+  PENDING
+  FILLED
+  CANCELLED
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAW
+  TRADE
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+// 🔥 جدید (خیلی مهم)
+enum ProductCategory {
+  GOLD
+  FIAT
+  CRYPTO
+}
+
+enum ProductUnit {
+  GRAM
+  UNIT
+}
+
+// ================= USER =================
+
+model User {
+  id                Int       @id @default(autoincrement())
+  firstName         String
+  lastName          String
+  phone             String    @unique
+  password          String
+  role              Role      @default(USER)
+  approved          Boolean   @default(false)
+
+  referralCode      String?   @unique
+  referredById      Int?
+  referredBy        User?     @relation("UserReferrals", fields: [referredById], references: [id])
+  referrals         User[]    @relation("UserReferrals")
+  referralEarnings  Float     @default(0)
+  referralPercent   Float     @default(0.05)
+
+  creditLimitUsd    Float     @default(0)
+  creditLimitGold   Float     @default(0)
+  creditLimitUsdt   Float     @default(0)
+  creditLimitAed    Float     @default(0)
+  creditLimitTrx    Float     @default(0)
+  creditLimitIrr    Float     @default(0)
+
+  wallets           Wallet[]
+  orders            Order[]
+  transactions      Transaction[]
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+// ================= WALLET =================
+
+model Wallet {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asset     AssetType
+  balance   Float     @default(0)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([userId, asset])
+}
+
+// ================= ASSET =================
+
+model Asset {
+  id        Int       @id @default(autoincrement())
+  name      AssetType @unique
+  price     Float     @default(0)
+  updatedAt DateTime  @updatedAt
+}
+
+// ================= ORDER =================
+
+model Order {
+  id        Int         @id @default(autoincrement())
+  userId    Int
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asset     AssetType
+  type      OrderType
+  amount    Float
+  price     Float
+  status    OrderStatus @default(PENDING)
+  createdAt DateTime    @default(now())
+}
+
+// ================= TRANSACTION =================
+
+model Transaction {
+  id        Int               @id @default(autoincrement())
+  userId    Int
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      TransactionType
+  asset     AssetType
+  amount    Float
+  status    TransactionStatus @default(PENDING)
+  createdAt DateTime          @default(now())
+}
+
+// ================= API SOURCE =================
+
+model ApiSource {
+  id        Int      @id @default(autoincrement())
+  name      String
+  url       String
+  type      String   // crypto | gold | fiat
+  isActive  Boolean  @default(true)
+  priority  Int      @default(1)
+  createdAt DateTime @default(now())
+
+  products Product[]
+  assetConfigs AssetConfig[]
+}
+
+// ================= ASSET CONFIG =================
+
+model AssetConfig {
+  id        Int      @id @default(autoincrement())
+  asset     String
+  spread    Float    @default(0.02)
+  isActive  Boolean  @default(true)
+
+  apiId     Int
+  api       ApiSource @relation(fields: [apiId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+// ================= PRODUCT =================
+
+model Product {
+  id          Int              @id @default(autoincrement())
+  name        String           @unique
+
+  // 🔥 حرفه‌ای شد
+  category    ProductCategory
+  unit        ProductUnit
+
+  price       Float      @default(0)
+  manualPrice Float?
+
+  apiId       Int?
+  api         ApiSource? @relation(fields: [apiId], references: [id])
+
+  useApi      Boolean    @default(true)
+
+  buySpread   Float      @default(0)
+  sellSpread  Float      @default(0)
+
+  isActive    Boolean    @default(true)
+  canBuy      Boolean    @default(true)
+  canSell     Boolean    @default(true)
+
+  autoTrade   Boolean    @default(true)
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+// ================= WHOLESALER =================
+
+model Wholesaler {
+  id          Int              @id @default(autoincrement())
+  name        String
+  apiUrl      String
+  apiKey      String?
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  productSettings ProductSetting[]
+}
+
+// ================= PRODUCT SETTINGS =================
+
+model ProductSetting {
+  id               Int        @id @default(autoincrement())
+
+  asset            String     @unique // اسم محصول
+
+  wholesalerId     Int?
+  wholesaler       Wholesaler? @relation(fields: [wholesalerId], references: [id])
+
+  spreadPercent    Float      @default(0)
+  autoHedgeEnabled Boolean    @default(false)
+
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+}
